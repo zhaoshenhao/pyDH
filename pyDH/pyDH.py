@@ -5,14 +5,22 @@
 """ Pure Python Diffie Hellman implementation """
 
 import os
-import binascii
 import hashlib
 
 # RFC 3526 - More Modular Exponential (MODP) Diffie-Hellman groups for 
 # Internet Key Exchange (IKE) https://tools.ietf.org/html/rfc3526 
 
 primes = {
-	
+	# 768-bit
+	1: {
+    "prime": 0xFFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E088A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9A63A3620FFFFFFFFFFFFFFFF,
+    "generator": 2
+	},
+	# 1024-bit
+	2: {
+    "prime": 0xFFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E088A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9A637ED6B0BFF5CB6F406B7EDEE386BFB5A899FA5AE9F24117C4B1FE649286651ECE65381FFFFFFFFFFFFFFFF,
+    "generator": 2
+	},
 	# 1536-bit
 	5: { 
 	"prime": 0xFFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E088A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9A637ED6B0BFF5CB6F406B7EDEE386BFB5A899FA5AE9F24117C4B1FE649286651ECE45B3DC2007CB8A163BF0598DA48361C55D39A69163FA8FD24CF5F83655D23DCA3AD961C62F356208552BB9ED529077096966D670C354E4ABC9804F1746C08CA237327FFFFFFFFFFFFFFFF,
@@ -59,9 +67,9 @@ class DiffieHellman:
 			self.p = primes[group]["prime"]
 			self.g = primes[group]["generator"]
 		else:
-			raise Exception("Group not supported")
-
-		self.__a = int(binascii.hexlify(os.urandom(32)), base=16)
+			raise Exception("Group not supported") # NOSONAR
+		self.__a = int.from_bytes(os.urandom(32), 'big') # Micropython does not support int conversion base
+		#self.__a = int(binascii.hexlify(os.urandom(32)), base=16) # NOSONAR
 
 	def get_private_key(self):
 		""" Return the private key (a) """
@@ -77,7 +85,7 @@ class DiffieHellman:
 		# 2 <= g^b <= p-2 and Lagrange for safe primes (g^bq)=1, q=(p-1)/2
 
 		if 2 <= other_contribution and other_contribution <= self.p - 2:
-			if pow(other_contribution, (self.p - 1) // 2, self.p) == 1:
+			if pow(other_contribution, (self.p - 1) // 2, self.p) == 1: # NOSONAR
 				return True
 		return False
 
@@ -86,6 +94,6 @@ class DiffieHellman:
 		# calculate the shared key G^ab mod p
 		if self.check_other_public_key(other_contribution):
 			self.shared_key = pow(other_contribution, self.__a, self.p)
-			return hashlib.sha256(str(self.shared_key).encode()).hexdigest()
+			return hashlib.sha256(str(self.shared_key).encode()).digest() # Use digest instead of hexdigest
 		else:
-			raise Exception("Bad public key from other party")
+			raise Exception("Bad public key from other party") #NOSONAR
